@@ -1,0 +1,9 @@
+{
+  "account": "ORGNAME-ACCOUNTNAME",
+  "user": "YOUR_SNOWFLAKE_USERNAME",
+  "password": "YOUR_SNOWFLAKE_PASSWORD",
+  "warehouse": "COMPUTE_WH",
+  "database": "DATAOPS_WORKSHOP",
+  "schema": "PUBLIC",
+  "role": "ACCOUNTADMIN"
+}
