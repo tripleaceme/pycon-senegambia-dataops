@@ -60,7 +60,7 @@ DataOps applies the same ideas to data, with one addition. In a data pipeline, b
 | Before (this starter) | After (end of the workshop) |
 |---|---|
 | Run by hand on a laptop | Runs on a daily schedule, or on demand from GitHub |
-| Credentials written in the code | python-decouple and a `.env` file locally, GitHub Secrets in the cloud |
+| Credentials written in the code | `config.json` kept out of Git locally, GitHub Secrets in the cloud |
 | Changes made directly | Feature branches and pull requests |
 | No tests | pytest unit tests for the transformation logic |
 | Any file gets loaded | Quality checks reject a bad file before it reaches Snowflake |
@@ -99,7 +99,7 @@ Everything below is free for this workshop, either open source or on a free tier
 | Warehouse | Snowflake | Stores the curated `BIKE_TRIPS` table |
 | Cloud storage | Backblaze B2 | Holds incoming files and archives processed and failed ones |
 | Version control | Git and GitHub | Branches, commits and pull requests |
-| Configuration | python-decouple | Reads settings from a local `.env` file or from environment variables |
+| Configuration | `config.json` and Python's `json` module | Holds credentials on your laptop, outside the code and outside Git |
 | Secrets in the cloud | GitHub Secrets | Credentials for scheduled runs |
 | Formatting and linting | Ruff | Keeps code consistent and catches common mistakes |
 | Unit testing | pytest | Checks the transformation logic |
@@ -271,10 +271,20 @@ Seven sections, in this order. Each one fixes one of the problems listed in [sec
 **Problem it solves:** credentials and settings live next to the code, and the same code cannot run on your laptop and in the cloud without editing it.
 
 **What we do**
-- Look at the ways teams keep settings out of code. Locally: environment variables, `.env` files with `python-dotenv` or `python-decouple`, INI files read with Python's built-in `configparser`, and JSON or YAML files. In the cloud: GitHub Secrets, AWS Secrets Manager, Azure Key Vault, Google Secret Manager and HashiCorp Vault.
-- Move the Snowflake values out of `src/load.py` into a `.env` file that Git ignores.
-- Read them in a new `src/config.py` with **python-decouple**: `config("SNOWFLAKE_ACCOUNT")`. It reads `.env` on your laptop and environment variables in GitHub Actions, so the same code works in both places.
-- Add `.env.example` so others know which settings to fill in, without seeing your values.
+- Compare the local formats teams use for credentials:
+
+  | Format | Supports sections | Python access |
+  |---|---|---|
+  | INI | Yes, `[SNOWFLAKE]` | `config["SNOWFLAKE"]["schema"]` |
+  | JSON | Nested objects | `config["snowflake"]["schema"]` |
+  | `.env` | Typically no | `os.environ["SNOWFLAKE_SCHEMA"]` |
+  | YAML | Nested mappings | `config["snowflake"]["schema"]` |
+  | TOML | Yes, `[SNOWFLAKE]` | `config["SNOWFLAKE"]["schema"]` |
+
+  And in the cloud: GitHub Secrets, AWS Secrets Manager, Azure Key Vault, Google Secret Manager and HashiCorp Vault.
+- Move the Snowflake values out of `src/load.py` into a **`config.json`** file that Git ignores.
+- Read it once in a new `src/config.py` and use `config["snowflake"]["account"]` in `load.py`.
+- Commit `config.example.json` with placeholders, so others know which settings to fill in without seeing your values.
 - Look at how the same names become **GitHub Secrets** when the pipeline runs in the cloud.
 
 **Outcome:** the pipeline runs anywhere without changing the source code, and no secret is ever committed.
@@ -406,7 +416,7 @@ pycon-senegambia-dataops/
 │   ├── pipeline.py
 │   ├── transform.py
 │   ├── load.py                     Now safe to rerun
-│   ├── config.py                   Settings read with python-decouple
+│   ├── config.py                   Reads config.json
 │   ├── quality.py                  Runtime data quality checks
 │   ├── storage.py                  Backblaze B2 file handling
 │   ├── logging_config.py           Structured logging
@@ -414,7 +424,7 @@ pycon-senegambia-dataops/
 ├── tests/
 │   ├── test_transform.py
 │   └── test_quality.py
-├── .env.example
+├── config.example.json             Placeholder settings (config.json itself is ignored)
 ├── pyproject.toml                  Ruff and pytest settings
 ├── requirements.txt
 └── README.md
