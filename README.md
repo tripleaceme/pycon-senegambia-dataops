@@ -39,7 +39,7 @@ You work on the data team of a bike-sharing company. Every day, a third-party pr
 A colleague wrote a Python script that reads the CSV, cleans it up and loads it into Snowflake. It works. But:
 
 - **Someone has to run it by hand.** If that person is sick or on leave, the data stops.
-- **Credentials sit in a file next to the code.** One careless commit and the Snowflake password is on GitHub.
+- **The Snowflake password is written in the code.** One careless commit and it is on GitHub.
 - **Changes go straight in.** There are no branches, no reviews and no record of who changed what or why.
 - **Nothing tests the code.** A small mistake in the duration calculation would reach every dashboard.
 - **Nothing checks the data.** If the provider sends a file with missing stations or broken timestamps, it is loaded anyway.
@@ -60,7 +60,7 @@ DataOps applies the same ideas to data, with one addition. In a data pipeline, b
 | Before (this starter) | After (end of the workshop) |
 |---|---|
 | Run by hand on a laptop | Runs on a daily schedule, or on demand from GitHub |
-| Credentials in a local JSON file | Environment variables locally, GitHub Secrets in the cloud |
+| Credentials written in the code | python-decouple and a `.env` file locally, GitHub Secrets in the cloud |
 | Changes made directly | Feature branches and pull requests |
 | No tests | pytest unit tests for the transformation logic |
 | Any file gets loaded | Quality checks reject a bad file before it reaches Snowflake |
@@ -99,7 +99,7 @@ Everything below is free for this workshop, either open source or on a free tier
 | Warehouse | Snowflake | Stores the curated `BIKE_TRIPS` table |
 | Cloud storage | Backblaze B2 | Holds incoming files and archives processed and failed ones |
 | Version control | Git and GitHub | Branches, commits and pull requests |
-| Configuration | python-dotenv | Loads settings from a local `.env` file |
+| Configuration | python-decouple | Reads settings from a local `.env` file or from environment variables |
 | Secrets in the cloud | GitHub Secrets | Credentials for scheduled runs |
 | Formatting and linting | Ruff | Keeps code consistent and catches common mistakes |
 | Unit testing | pytest | Checks the transformation logic |
@@ -123,7 +123,6 @@ pycon-senegambia-dataops/
 │   └── load.py                          Creates BIKE_TRIPS in Snowflake and appends the rows
 ├── scripts/
 │   └── dowload_data.py                  How the data file was produced (you don't need to run it)
-├── local_config.example.json            Template for your Snowflake settings
 ├── requirements.txt                     pandas, snowflake-connector-python
 ├── .gitignore
 └── README.md
@@ -131,7 +130,7 @@ pycon-senegambia-dataops/
 
 **What the pipeline does today**
 
-1. Reads `local_config.json` for your Snowflake connection.
+1. Takes the Snowflake connection details written at the top of `src/load.py`.
 2. Reads the CSV into a Pandas DataFrame.
 3. Keeps five columns, renames them, converts the timestamps and calculates `duration_minutes`.
 4. Creates `BIKE_TRIPS` in Snowflake if it does not exist and appends the rows.
@@ -216,25 +215,21 @@ Then collect your **account identifier**. In Snowsight, click your name in the b
 
 ### Step 4 — Add your connection settings
 
-```bash
-cp local_config.example.json local_config.json      # Windows: copy local_config.example.json local_config.json
+Open `src/load.py`. The Snowflake connection details are written at the top of the file:
+
+```python
+SNOWFLAKE_ACCOUNT = "your_account_identifier"
+SNOWFLAKE_USER = "your_username"
+SNOWFLAKE_PASSWORD = "your_password"
+SNOWFLAKE_WAREHOUSE = "COMPUTE_WH"
+SNOWFLAKE_DATABASE = "DATAOPS_WORKSHOP"
+SNOWFLAKE_SCHEMA = "PUBLIC"
+SNOWFLAKE_ROLE = "ACCOUNTADMIN"
 ```
 
-Open `local_config.json` and fill it in:
+Replace the placeholders with your own values and save the file.
 
-```json
-{
-  "account": "ORGNAME-ACCOUNTNAME",
-  "user": "YOUR_SNOWFLAKE_USERNAME",
-  "password": "YOUR_SNOWFLAKE_PASSWORD",
-  "warehouse": "COMPUTE_WH",
-  "database": "DATAOPS_WORKSHOP",
-  "schema": "PUBLIC",
-  "role": "ACCOUNTADMIN"
-}
-```
-
-`local_config.json` is listed in `.gitignore`, so Git will not commit it. Never paste these values into code, issues or chat. Keeping credentials out of the code is the first thing we fix in the workshop.
+> **Do not commit `src/load.py` after you add your password.** Your fork is public, so a commit would publish the password. Writing credentials in the code is the first problem we fix in the workshop. Until then, keep the change on your laptop only.
 
 ### Step 5 — Run the pipeline
 
@@ -276,10 +271,11 @@ Seven sections, in this order. Each one fixes one of the problems listed in [sec
 **Problem it solves:** credentials and settings live next to the code, and the same code cannot run on your laptop and in the cloud without editing it.
 
 **What we do**
-- Move the Snowflake settings from `local_config.json` into a `.env` file and load them with `python-dotenv`.
-- Add `.env.example` so others know which variables to set, without seeing your values.
-- Add a small `config.py` that reads settings from the environment and fails with a clear message when one is missing.
-- Look at how the same variable names become **GitHub Secrets** later, when the pipeline runs in the cloud.
+- Look at the ways teams keep settings out of code. Locally: environment variables, `.env` files with `python-dotenv` or `python-decouple`, and config files such as JSON, YAML or INI. In the cloud: GitHub Secrets, AWS Secrets Manager, Azure Key Vault, Google Secret Manager and HashiCorp Vault.
+- Move the Snowflake values out of `src/load.py` into a `.env` file that Git ignores.
+- Read them in a new `src/config.py` with **python-decouple**: `config("SNOWFLAKE_ACCOUNT")`. It reads `.env` on your laptop and environment variables in GitHub Actions, so the same code works in both places.
+- Add `.env.example` so others know which settings to fill in, without seeing your values.
+- Look at how the same names become **GitHub Secrets** when the pipeline runs in the cloud.
 
 **Outcome:** the pipeline runs anywhere without changing the source code, and no secret is ever committed.
 
@@ -385,7 +381,8 @@ What the pipeline does in each case:
 
 | Time | Section |
 |---|---|
-| 0–15 min | Introduction, the business problem, architecture, check everyone's starter runs |
+| 0–10 min | Introduction, the business problem, check everyone's starter runs |
+| 10–15 min | What DevOps is, what DataOps is, and how they relate |
 | 15–25 min | 01 · Configuration management |
 | 25–35 min | 02 · Git and version control |
 | 35–50 min | 03 · Automated unit testing |
@@ -409,7 +406,7 @@ pycon-senegambia-dataops/
 │   ├── pipeline.py
 │   ├── transform.py
 │   ├── load.py                     Now safe to rerun
-│   ├── config.py                   Settings from environment variables
+│   ├── config.py                   Settings read with python-decouple
 │   ├── quality.py                  Runtime data quality checks
 │   ├── storage.py                  Backblaze B2 file handling
 │   ├── logging_config.py           Structured logging
@@ -430,10 +427,10 @@ pycon-senegambia-dataops/
 | `python` not found, or the version is below 3.11 | On macOS and Linux, try `python3`. Install 3.12 from [python.org](https://www.python.org/downloads/). |
 | `pip install` fails building a package from source | Your Python version is probably too old or too new for a prebuilt wheel. Use Python 3.11 or 3.12. |
 | `ModuleNotFoundError: No module named 'src'` | Run the command from the repository root as `python -m src.pipeline`, not `python src/pipeline.py`. |
-| `local_config.json not found` | Copy `local_config.example.json` to `local_config.json` (step 4). |
+| Error mentioning `your_account_identifier` | You have not replaced the placeholders at the top of `src/load.py` (step 4). |
 | `250001: Could not connect` or an account not found error | Check the `account` value. Use the account identifier (`ORGNAME-ACCOUNTNAME`), not the full URL. |
 | Incorrect username or password | Log in to Snowsight with the same values to confirm them. |
-| Login rejected because MFA is required | Snowflake increasingly blocks password-only logins from scripts. In Snowsight, go to your user profile, generate a **programmatic access token** and put it in the `password` field. |
+| Login rejected because MFA is required | Snowflake increasingly blocks password-only logins from scripts. In Snowsight, go to your user profile, generate a **programmatic access token** and put it in `SNOWFLAKE_PASSWORD`. |
 | `Database 'DATAOPS_WORKSHOP' does not exist` | Run the SQL in step 3, or check the `role` has access to it. |
 | `No active warehouse selected` | Check the `warehouse` name. Run `SHOW WAREHOUSES;` to see what exists. |
 | Row count is a multiple of 3,605 | You ran the pipeline more than once. The starter appends on every run. Truncate the table and run it once. |
