@@ -271,7 +271,7 @@ Seven sections, in this order. Each one fixes one of the problems listed in [sec
 **Problem it solves:** credentials and settings live next to the code, and the same code cannot run on your laptop and in the cloud without editing it.
 
 **What we do**
-- Look at the ways teams keep settings out of code. Locally: environment variables, `.env` files with `python-dotenv` or `python-decouple`, and config files such as JSON, YAML or INI. In the cloud: GitHub Secrets, AWS Secrets Manager, Azure Key Vault, Google Secret Manager and HashiCorp Vault.
+- Look at the ways teams keep settings out of code. Locally: environment variables, `.env` files with `python-dotenv` or `python-decouple`, INI files read with Python's built-in `configparser`, and JSON or YAML files. In the cloud: GitHub Secrets, AWS Secrets Manager, Azure Key Vault, Google Secret Manager and HashiCorp Vault.
 - Move the Snowflake values out of `src/load.py` into a `.env` file that Git ignores.
 - Read them in a new `src/config.py` with **python-decouple**: `config("SNOWFLAKE_ACCOUNT")`. It reads `.env` on your laptop and environment variables in GitHub Actions, so the same code works in both places.
 - Add `.env.example` so others know which settings to fill in, without seeing your values.
