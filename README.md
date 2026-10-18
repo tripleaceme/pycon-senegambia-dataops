@@ -283,7 +283,7 @@ Seven sections, in this order. Each one fixes one of the problems listed in [sec
 
   And in the cloud: GitHub Secrets, AWS Secrets Manager, Azure Key Vault, Google Secret Manager and HashiCorp Vault.
 - Move the Snowflake values out of `src/load.py` into a **`config.json`** file that Git ignores.
-- Read it once in a new `src/config.py` and use `config["snowflake"]["account"]` in `load.py`.
+- Read `config.json` directly in `load.py` with `json.load`, and use `config["snowflake"]["account"]`.
 - Commit `config.example.json` with placeholders, so others know which settings to fill in without seeing your values.
 - Look at how the same names become **GitHub Secrets** when the pipeline runs in the cloud.
 
@@ -416,7 +416,6 @@ pycon-senegambia-dataops/
 │   ├── pipeline.py
 │   ├── transform.py
 │   ├── load.py                     Now safe to rerun
-│   ├── config.py                   Reads config.json
 │   ├── quality.py                  Runtime data quality checks
 │   ├── storage.py                  Backblaze B2 file handling
 │   ├── logging_config.py           Structured logging
